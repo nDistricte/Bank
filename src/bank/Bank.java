@@ -3,8 +3,9 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
  */
 package bank;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
+import java.sql.*;
 /**
  *
  * @author anatol
@@ -15,19 +16,62 @@ public class Bank implements Manager {
     Scanner input = new Scanner(System.in);
 
     public void Register(){
+        String UserDB = "jbc::sqlite:Bank.db";
+         try{
+            Connection connection = DriverManager.getConnection(UserDB);
+            
+             System.out.println("\nFirst name: ");
+             String fName = input.next();
+             
+             System.out.println("\nLast name: ");
+             String lName = input.next();
+             
+             System.out.println("\nEmail: ");
+             String Email = input.next();
+             
+             System.out.println("\nDate of Birth");
+             System.out.println("Day: ");
+             int Day = input.nextInt();
+             System.out.println("Month: ");
+             int Month = input.nextInt();
+             System.out.println("Year: ");
+             int Year = input.nextInt();
+             
+             DateOfBirth DoBUser = new DateOfBirth(Day,Month,Year);
+             
+             System.out.println("Password: ");
+             String Password = input.next();
+             
+             int Balance = 0;
+             String ID ="d";
+             String Reg = "INSERT INTO USER fName, lName, Email, D";
+            }
+         catch(SQLException e){}
+                
     }
 
     
     
     @Override
-    public void transfer(String src, String dest, int amount) {
+    public void transaction(String src, String dest, int amount) {
         throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
+    
+    @Override
     public boolean Login(){
+        boolean validation = true;
         System.out.println("Your ID:");
-        String ID = input.next();
+        String IdInput = input.next();
         System.out.println("password:");
-        String password = input.next();
+        String passwordInput = input.next();
+        
+        String LoginVal = "SELECT ID, Password FROM User WHERE ID == IdInput AND Password == passwordInput";
+        if(LoginVal){
+        return true;
+        }
+        else{
+            return false;
+        }
         // Needed SQL query to compare input data with the actual data to acccess
         // If statement needed later on 
     }
@@ -48,24 +92,18 @@ public class Bank implements Manager {
             String ID = input.next();
         
         case(2):
-        this.DisplayList();
         break;
         }
         return exit;
     }
     
-    public static void main(String[] args) {
-    Bank wow = new Bank();
+    /*public static void main(String[] args) {
+    //Bank wow = new Bank();
     boolean exit = false;
     while(!exit){
     exit = wow.menu();
     }
     }
 
-    @Override
-    public void displayBal() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-    }
 
-
-}
+}*/
