@@ -6,6 +6,9 @@ package bank;
 import java.io.*;
 import java.util.*;
 import java.sql.*;
+import java.time.LocalDate;
+import java.sql.Date;
+import java.time.format.DateTimeFormatter;
 /**
  *
  * @author anatol
@@ -15,6 +18,7 @@ public class Bank implements Manager {
     String UserDB = "jdbc:sqlite:Bank.db";    
     Scanner input = new Scanner(System.in);
     Connection connection = null;
+    
 
     public void Register(){          
          try{
@@ -36,19 +40,32 @@ public class Bank implements Manager {
              System.out.println("Month: ");
              int Month = input.nextInt();
              System.out.println("Year: ");
-             int Year = input.nextInt();           
-             DateOfBirth DoBUser = new DateOfBirth(Day,Month,Year);
+             int Year = input.nextInt();  
              
-             System.out.println("Password: ");
+             String dateOfBirth = String.format("%02d.%02d.%04d", Day, Month, Year);
+
+             System.out.println("Date of Birth (SQL): " + dateOfBirth);
+             
+             System.out.println("\nPassword: ");
              String Password = input.next();
              
              IDGenerator generatedID = new IDGenerator();
              String userID = generatedID.generateID();
-             System.out.println(userID);
+             int Balance = 0;
              
              
-             String Reg = "INSERT INTO USER fName, lName, Email, D";
+             PreparedStatement statement = connection.prepareStatement("INSERT INTO USER (fName, lName, Email, DateOfBirth, Password, UserID, Balance) VALUES (?, ?, ?, ?, ?, ?, ?)");
+             statement.setString(1, fName);
+             statement.setString(2, lName);
+             statement.setString(3, Email);
+             statement.setString(4, dateOfBirth);
+             statement.setString(5, Password);
+             statement.setString(6, userID);
+             statement.setInt(7, Balance);
+             statement.executeUpdate();
+            
             }
+         // catches errors and returns them
          catch(SQLException e){
              e.printStackTrace();
          } finally {
@@ -73,19 +90,28 @@ public class Bank implements Manager {
     
     @Override
     public boolean Login(){
-        boolean validation = true;
-        System.out.println("Your ID:");
-        String IdInput = input.next();
-        System.out.println("password:");
-        String passwordInput = input.next();
-        
-        String LoginVal = "SELECT ID, Password FROM User WHERE ID == IdInput AND Password == passwordInput";
-        if(LoginVal){
-        return true;
+        boolean invalid = false;
+        try{
+         while(!invalid){
+         connection = DriverManager.getConnection(UserDB);
+            System.out.println("Your User ID: ");
+            String UserID = input.next();
+            System.out.println("\npassword: ");
+            String password = input.next();
+         
+         
+           PreparedStatement statement = connection.prepareStatement("SELECT UserID, Password FROM User WHERE UserID == ? AND Password == ?");
+           statement.setString(1, UserID);
+           statement.setString(2, password);
+           statement.executeQuery();
+         }
+         if(!invalid){}
         }
-        else{
-            return false;
+        catch(SQLException e){
+        e.printStackTrace();
         }
+        finally{}
+                
         // Needed SQL query to compare input data with the actual data to acccess
         // If statement needed later on 
         

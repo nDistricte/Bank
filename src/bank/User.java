@@ -26,6 +26,10 @@ public class User {
     this.Balance = Balance;
     this.ID = ID;
     }
+    public User(String ID,String Password){
+    this.ID = ID;
+    this.Password = Password;
+    }
     
     public void setFName(String fName){
     this.fName = fName;

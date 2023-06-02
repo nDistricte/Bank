@@ -3,12 +3,16 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package bank;
-import java.time.LocalDate;
+import java.util.Calendar;
+import java.util.Date;
+
 /**
- *
+ * Represents a date of birth.
+ * Allows validation and manipulation of the date.
+ * Provides conversion to `Date` and string representation.
+ * 
  * @author anatol
  */
-
 public class DateOfBirth {
     private int day;
     private int month;
@@ -60,8 +64,14 @@ public class DateOfBirth {
         this.year = year;
     }
     
-    public LocalDate toLocalDate() {
-        return LocalDate.of(year, month, day);
+    public Date toDate() {
+        Calendar cal = Calendar.getInstance();
+        cal.set(year, month - 1, day); // Months in Calendar class are 0-based
+        return cal.getTime();
+    }
+    
+    public long getTime() {
+        return toDate().getTime();
     }
     
     @Override
@@ -74,10 +84,15 @@ public class DateOfBirth {
             return false;
         }
         
-        LocalDate currentDate = LocalDate.now();
-        LocalDate minimumDate = currentDate.minusYears(18);
-        LocalDate dateOfBirth = LocalDate.of(year, month, day);
+        Calendar currentDate = Calendar.getInstance();
+        currentDate.set(Calendar.HOUR_OF_DAY, 0);
         
-        return !dateOfBirth.isAfter(currentDate) && !dateOfBirth.isAfter(minimumDate);
+        Calendar minimumDate = (Calendar) currentDate.clone();
+        minimumDate.add(Calendar.YEAR, -18);
+        
+        Calendar dateOfBirth = Calendar.getInstance();
+        dateOfBirth.set(year, month - 1, day); // Months in Calendar class are 0-based
+        
+        return !dateOfBirth.after(currentDate) && !dateOfBirth.after(minimumDate);
     }
 }
