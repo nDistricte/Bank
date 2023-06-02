@@ -11,9 +11,9 @@ import java.sql.*;
  * @author anatol
  */
 public class IDGenerator {
-    private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyz";
-    private static final int ID_LENGTH = 8;
-    private static final String DATABASE_URL = "jdbc:sqlite:Bank.db";
+    private static final String Numbers = "1234567890";
+    private static final int ID_Lenght = 8;
+    private static final String Database_URL = "jdbc:sqlite:Bank.db";
     
     public static String generateID() {
         String ID = null;
@@ -22,20 +22,20 @@ public class IDGenerator {
         
         try {
             // Connect to the SQLite database
-            connection = DriverManager.getConnection(DATABASE_URL);
+            connection = DriverManager.getConnection(Database_URL);
             
             // Generate and check for uniqueness
             while (!isUnique) {
                 StringBuilder sb = new StringBuilder();
                 Random random = new Random();
                 
-                // Add the starting letter "a"
-                sb.append("a");
+                // Add the starting letter "A"
+                sb.append("A");
                 
                 // Generate the remaining characters randomly
-                for (int i = 1; i < ID_LENGTH; i++) {
-                    int randomIndex = random.nextInt(ALPHABET.length());
-                    char randomChar = ALPHABET.charAt(randomIndex);
+                for (int i = 1; i < ID_Lenght; i++) {
+                    int randomIndex = random.nextInt(Numbers.length());
+                    char randomChar = Numbers.charAt(randomIndex);
                     sb.append(randomChar);
                 }
                 
@@ -66,9 +66,5 @@ public class IDGenerator {
         }
         
         return ID;
-    }
-    public static void main(String[] args){
-        String randomID = generateID();
-        System.out.println("Random ID: " + randomID);
     }
 }

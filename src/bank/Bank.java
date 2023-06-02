@@ -12,13 +12,14 @@ import java.sql.*;
  */
 public class Bank implements Manager {
     
-    
+    String UserDB = "jdbc:sqlite:Bank.db";    
     Scanner input = new Scanner(System.in);
+    Connection connection = null;
 
-    public void Register(){
-        String UserDB = "jbc::sqlite:Bank.db";
+    public void Register(){          
          try{
-            Connection connection = DriverManager.getConnection(UserDB);
+            // Connect to the SQLite database
+             connection = DriverManager.getConnection(UserDB);
             
              System.out.println("\nFirst name: ");
              String fName = input.next();
@@ -28,25 +29,38 @@ public class Bank implements Manager {
              
              System.out.println("\nEmail: ");
              String Email = input.next();
-             
+              
              System.out.println("\nDate of Birth");
              System.out.println("Day: ");
              int Day = input.nextInt();
              System.out.println("Month: ");
              int Month = input.nextInt();
              System.out.println("Year: ");
-             int Year = input.nextInt();
-             
+             int Year = input.nextInt();           
              DateOfBirth DoBUser = new DateOfBirth(Day,Month,Year);
              
              System.out.println("Password: ");
              String Password = input.next();
              
-             int Balance = 0;
-             String ID ="d";
+             IDGenerator generatedID = new IDGenerator();
+             String userID = generatedID.generateID();
+             System.out.println(userID);
+             
+             
              String Reg = "INSERT INTO USER fName, lName, Email, D";
             }
-         catch(SQLException e){}
+         catch(SQLException e){
+             e.printStackTrace();
+         } finally {
+            // Close the database connection
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
                 
     }
 
@@ -74,6 +88,12 @@ public class Bank implements Manager {
         }
         // Needed SQL query to compare input data with the actual data to acccess
         // If statement needed later on 
+        
+    }
+    
+    public int DisplayBalance(){
+        
+        return 1;
     }
     
     public boolean menu(){
@@ -97,13 +117,15 @@ public class Bank implements Manager {
         return exit;
     }
     
-    /*public static void main(String[] args) {
-    //Bank wow = new Bank();
-    boolean exit = false;
-    while(!exit){
-    exit = wow.menu();
+    public static void main(String[] args) {
+    Bank wow = new Bank();
+    wow.Register();
+    //boolean exit = false;
+    //while(!exit){
+    //exit = wow.menu();
     }
+    
     }
 
 
-}*/
+

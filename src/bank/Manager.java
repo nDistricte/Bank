@@ -10,8 +10,8 @@ package bank;
  */
 public interface Manager {
     public abstract void Register();
-    public abstract void Login();
-    public abstract void displayBal();
+    public abstract boolean Login();
+    public abstract int DisplayBalance();
     public abstract void transaction(String src, String dest, int amount);
     public abstract boolean menu();
 }
