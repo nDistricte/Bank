@@ -9,21 +9,38 @@ import java.sql.*;
 import java.time.LocalDate;
 import java.sql.Date;
 import java.time.format.DateTimeFormatter;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 /**
  *
  * @author anatol
  */
 public class Bank implements Manager {
-    
-    String UserDB = "jdbc:sqlite:Bank.db";    
+       
     Scanner input = new Scanner(System.in);
     Connection connection = null;
     
+    
+    public void ConnectDB() throws SQLException{
+        // Connect to the SQLite database
+    String UserDB = "jdbc:sqlite:Bank.db";
+    connection = DriverManager.getConnection(UserDB);
+    }
+    public void CloseDB() throws SQLException{
+              // Close the database connection
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+    }
 
     public void Register(){          
          try{
             // Connect to the SQLite database
-             connection = DriverManager.getConnection(UserDB);
+             ConnectDB();
             
              System.out.println("\nFirst name: ");
              String fName = input.next();
@@ -44,7 +61,7 @@ public class Bank implements Manager {
              
              String dateOfBirth = String.format("%02d.%02d.%04d", Day, Month, Year);
 
-             System.out.println("Date of Birth (SQL): " + dateOfBirth);
+             System.out.println("Date of Birth: " + dateOfBirth);
              
              System.out.println("\nPassword: ");
              String Password = input.next();
@@ -64,61 +81,83 @@ public class Bank implements Manager {
              statement.setInt(7, Balance);
              statement.executeUpdate();
             
+             System.out.println("\nthat is your User ID: " + userID + "\n");
             }
          // catches errors and returns them
          catch(SQLException e){
              e.printStackTrace();
          } finally {
-            // Close the database connection
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
+             try {
+                 CloseDB();
+             } catch (SQLException e) {
+                 e.printStackTrace();
+             }
         }
                 
     }
-
     
     
     @Override
-    public void transaction(String src, String dest, int amount) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    public void transaction() {
+        try{
+            ConnectDB();
+            
+            System.out.println("Please, enter your ID: ");
+            String src = input.next();
+            System.out.println("\nPlease, enter your destination ID: ");
+            String dest = input.next();
+            System.out.println("\nPlease, enter the amount: ");
+            int amount = input.nextInt();
+            
+            PreparedStatement statement = connection.prepareStatement("SELECT * FROM User WHERE");
+        }
+        catch(SQLException e){
+            e.printStackTrace();
+        }
+       
     }
     
-    @Override
     public boolean Login(){
         boolean invalid = false;
         try{
          while(!invalid){
-         connection = DriverManager.getConnection(UserDB);
+            ConnectDB();
+            
             System.out.println("Your User ID: ");
             String UserID = input.next();
             System.out.println("\npassword: ");
             String password = input.next();
          
          
-           PreparedStatement statement = connection.prepareStatement("SELECT UserID, Password FROM User WHERE UserID == ? AND Password == ?");
+           PreparedStatement statement = connection.prepareStatement("SELECT * FROM User WHERE UserID = ? AND Password = ?");
            statement.setString(1, UserID);
            statement.setString(2, password);
-           statement.executeQuery();
+           ResultSet result = statement.executeQuery();           
+           
+         if(result.next()){
+             invalid = true;
+             System.out.println("\nLogin was succesfull");
+            }
+         else{
+             System.out.println("\n invalid \n");
+             }
          }
-         if(!invalid){}
         }
         catch(SQLException e){
-        e.printStackTrace();
+        e.printStackTrace();        
         }
-        finally{}
-                
-        // Needed SQL query to compare input data with the actual data to acccess
-        // If statement needed later on 
-        
+       
+        finally{
+            try {
+                 CloseDB();
+             } catch (SQLException e) {
+                 e.printStackTrace();
+             }
+        }
+        return invalid = false;                       
     }
     
     public int DisplayBalance(){
-        
         return 1;
     }
     
@@ -145,7 +184,7 @@ public class Bank implements Manager {
     
     public static void main(String[] args) {
     Bank wow = new Bank();
-    wow.Register();
+    wow.Login();
     //boolean exit = false;
     //while(!exit){
     //exit = wow.menu();
