@@ -4,6 +4,7 @@
  */
 package bank;
 import java.io.*;
+import java.math.BigDecimal;
 import java.util.*;
 import java.sql.*;
 import java.time.LocalDate;
@@ -97,22 +98,29 @@ public class Bank implements Manager {
     }
     
     
-    @Override
-    public void transaction() {
+    //Maybe want to include threads?
+    public void transaction(String src, String dest, int amount){
         try{
-            ConnectDB();
+            ConnectDB();  
+                      
+            PreparedStatement statement1 = connection.prepareStatement("SELECT UserID, Balance - ? AS Balance FROM User WHERE UserID = ?");
+            statement1.setInt(1, amount);
+            statement1.setString(2, src);
+            statement1.execute(); 
             
-            System.out.println("Please, enter your ID: ");
-            String src = input.next();
-            System.out.println("\nPlease, enter your destination ID: ");
-            String dest = input.next();
-            System.out.println("\nPlease, enter the amount: ");
-            int amount = input.nextInt();
-            
-            PreparedStatement statement = connection.prepareStatement("SELECT * FROM User WHERE");
+            /*PreparedStatement statement2 = connection.prepareStatement("SELECT UserID, Balance + ? AS Balance FROM User Where UserID = ?");
+            statement2.setInt(1, amount);
+            statement2.setString(2, dest);
+            statement2.execute();*/
         }
         catch(SQLException e){
             e.printStackTrace();
+        } finally{
+            try {
+                CloseDB();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
        
     }
@@ -184,7 +192,8 @@ public class Bank implements Manager {
     
     public static void main(String[] args) {
     Bank wow = new Bank();
-    wow.Login();
+    wow.transaction("A7087718", "A8114290", 25);
+    //wow.Login();
     //boolean exit = false;
     //while(!exit){
     //exit = wow.menu();
