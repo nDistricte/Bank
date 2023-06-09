@@ -97,21 +97,23 @@ public class Bank implements Manager {
                 
     }
     
-    
-    //Maybe want to include threads?
+ 
     public void transaction(String src, String dest, int amount){
         try{
             ConnectDB();  
                       
-            PreparedStatement statement1 = connection.prepareStatement("SELECT UserID, Balance - ? AS Balance FROM User WHERE UserID = ?");
-            statement1.setInt(1, amount);
-            statement1.setString(2, src);
-            statement1.execute(); 
-            
-            /*PreparedStatement statement2 = connection.prepareStatement("SELECT UserID, Balance + ? AS Balance FROM User Where UserID = ?");
-            statement2.setInt(1, amount);
-            statement2.setString(2, dest);
-            statement2.execute();*/
+        // Deduct the amount from the source user's balance
+        PreparedStatement statement1 = connection.prepareStatement("UPDATE User SET Balance = Balance - ? WHERE UserID = ?");
+        statement1.setInt(1, amount);
+        statement1.setString(2, src);
+        statement1.executeUpdate();
+        
+        // Add the amount to the destination user's balance
+        PreparedStatement statement2 = connection.prepareStatement("UPDATE User SET Balance = Balance + ? WHERE UserID = ?");
+        statement2.setInt(1, amount);
+        statement2.setString(2, dest);
+        statement2.executeUpdate();
+        
         }
         catch(SQLException e){
             e.printStackTrace();
@@ -125,74 +127,103 @@ public class Bank implements Manager {
        
     }
     
-    public boolean Login(){
-        boolean invalid = false;
-        try{
-         while(!invalid){
+    public boolean Login() {
+    boolean invalid = false;
+    try {
+        while (!invalid) {
             ConnectDB();
-            
+
             System.out.println("Your User ID: ");
-            String UserID = input.next();
+            String userID = input.next();
             System.out.println("\npassword: ");
             String password = input.next();
-         
-         
-           PreparedStatement statement = connection.prepareStatement("SELECT * FROM User WHERE UserID = ? AND Password = ?");
-           statement.setString(1, UserID);
-           statement.setString(2, password);
-           ResultSet result = statement.executeQuery();           
-           
-         if(result.next()){
-             invalid = true;
-             System.out.println("\nLogin was succesfull");
+
+            PreparedStatement statement = connection.prepareStatement("SELECT * FROM User WHERE UserID = ? AND Password = ?");
+            statement.setString(1, userID);
+            statement.setString(2, password);
+            ResultSet result = statement.executeQuery();
+
+            if (result.next()) {
+                invalid = true;
+                System.out.println("\nLogin was successful");
+            } else {
+                System.out.println("\nInvalid user ID or password");
             }
-         else{
-             System.out.println("\n invalid \n");
-             }
-         }
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    } finally {
+        try {
+            CloseDB();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    return invalid;
+}
+    
+    public void DisplayBalance(){
+        try{
+        PreparedStatement statement = connection.prepareStatement("SELECT Balance FROM User");
+        statement.executeQuery();
         }
         catch(SQLException e){
-        e.printStackTrace();        
+        e.printStackTrace();
         }
-       
-        finally{
-            try {
-                 CloseDB();
-             } catch (SQLException e) {
-                 e.printStackTrace();
-             }
-        }
-        return invalid = false;                       
     }
     
-    public int DisplayBalance(){
-        return 1;
-    }
-    
-    public boolean menu(){
+public boolean menu() {
     boolean exit = false;
     
-        System.out.println("Welcome");
-        System.out.println("\nPress 1 for adding a user");
-        System.out.println("Press 2 for displaying");
-        
-        int choise = input.nextInt();
-        
-        switch(choise){
-        
-        case(1):
-            int Balance = input.nextInt();
-            String ID = input.next();
-        
-        case(2):
-        break;
-        }
-        return exit;
+    System.out.println("Welcome");
+    System.out.println("\nPress 1 to Register");
+    System.out.println("Press 2 to Login");
+    
+    int choice1 = input.nextInt();
+    
+    switch (choice1) {
+        case 1:
+            Register();
+            break;
+        case 2:
+            if (Login()) {
+                System.out.println("\nPress 1 to do a transaction");
+                System.out.println("Press 2 to display your balance");
+                int choice2 = input.nextInt();
+                switch (choice2) {
+                    case 1:
+                        System.out.print("Enter source user ID: ");
+                        String src = input.next();
+                        System.out.print("Enter destination user ID: ");
+                        String dest = input.next();
+                        System.out.print("Enter amount: ");
+                        int amount = input.nextInt();                               
+                        transaction(src, dest, amount);
+                        break;
+                    case 2:
+                        DisplayBalance();
+                        break;
+                    default:
+                        System.out.println("Invalid choice.");
+                        break;
+                }
+            } else {
+                System.out.println("Login failed. Invalid credentials.");
+            }
+            break;
+        default:
+            System.out.println("Invalid choice.");
+            break;
     }
+    
+    return exit;
+}
+
+
     
     public static void main(String[] args) {
     Bank wow = new Bank();
-    wow.transaction("A7087718", "A8114290", 25);
+    wow.menu();
     //wow.Login();
     //boolean exit = false;
     //while(!exit){
