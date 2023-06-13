@@ -40,6 +40,9 @@ public class User {
     public void setEmail(String Email){
     this.Email = Email;
     }
+    public void setDoB(DateOfBirth DoB){
+    this.DoB = DoB;
+    }
     public void setPassword(String Password){
     this.Password = Password;
     }
@@ -58,6 +61,9 @@ public class User {
     }
     public String getEmail(){
     return Email;
+    }
+    public DateOfBirth getDoB(){
+    return DoB;
     }
     public String getPassword(){
     return Password;
