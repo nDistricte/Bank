@@ -102,34 +102,51 @@ public class Bank implements Manager {
                 
     }
     
- 
     public void transaction(String dest, int amount){
         try{
-            ConnectDB();  
+            synchronized(this){
+            ConnectDB();
+            
+            TransactionIDGenerator generatedID = new TransactionIDGenerator();
+            String transactionID = generatedID.generatedTransactionID();
                       
         // Deduct the amount from the source user's balance        
-        PreparedStatement statement1 = connection.prepareStatement("UPDATE User SET Balance = Balance - ? WHERE UserID = ?");
+        PreparedStatement statement1 = connection.prepareStatement("UPDATE User SET Balance = Balance - ?, Transactions = ? WHERE UserID = ?");
         statement1.setInt(1, amount);
-        statement1.setString(2, currentUser.getID());
+        statement1.setString(2, transactionID);
+        statement1.setString(3, currentUser.getID());
         statement1.executeUpdate();
         
         // Add the amount to the destination user's balance
-        PreparedStatement statement2 = connection.prepareStatement("UPDATE User SET Balance = Balance + ? WHERE UserID = ?");
+        PreparedStatement statement2 = connection.prepareStatement("UPDATE User SET Balance = Balance + ?, Transactions = ? WHERE UserID = ?");
         statement2.setInt(1, amount);
-        statement2.setString(2, dest);
+        statement2.setString(2, transactionID);
+        statement2.setString(3, dest);
         statement2.executeUpdate();
+       
+        //We need to store every transaction from its source to its destination
+        PreparedStatement statement3 = connection.prepareStatement("INSERT INTO Transactions (TransactionID, UserID) VALUES (?, ?)");
+        statement3.setString(1, transactionID);
+        statement3.setString(2, currentUser.getID());
+        statement3.executeUpdate();
         
+        PreparedStatement statement4 = connection.prepareStatement("INSERT INTO Transactions (TransactionID, UserID) VALUES (?, ?)");
+        statement4.setString(1, transactionID);
+        statement4.setString(2, dest);
+        statement4.executeUpdate();
+            }
         }
         catch(SQLException e){
             e.printStackTrace();
-        } finally{
-            try {
-                CloseDB();
-            } catch (SQLException e) {
-                e.printStackTrace();
+        }
+        finally{
+        try{
+            CloseDB();
+            }
+        catch(SQLException ex){
+            ex.printStackTrace();
             }
         }
-       
     }
     
     public User Login(){
@@ -152,8 +169,8 @@ public class Bank implements Manager {
             if (result.next()) {
                 invalid = true;
                 //Saving the data from the db into variables to re-use it
-                String fName = result.getString("fName");
-                String lName = result.getString("lName");
+                String firstName = result.getString("fName");
+                String lastName = result.getString("lName");
                 String email = result.getString("Email");
 
                 String dateString = result.getString("DateOfBirth");
@@ -180,7 +197,7 @@ public class Bank implements Manager {
                 String UserID = result.getString("UserID");
                 int balance = result.getInt("Balance");
                 
-                user = new User(fName, lName, email, dob, userPassword, balance, userID);
+                user = new User(firstName, lastName, email, dob, userPassword, balance, userID);
                 currentUser = user;
                 
                 System.out.println("\nLogin was successful");
@@ -189,26 +206,52 @@ public class Bank implements Manager {
             }
         }
     } catch (SQLException e) {
-        e.printStackTrace();
+        e.printStackTrace();        
     }
+    finally{
+        try{
+            CloseDB();
+            }
+        catch(SQLException ex){
+            ex.printStackTrace();
+            }
+        }
     return user;
 }
     
-    public void DisplayBalance(){       
-        int Bal =currentUser.getBalance();
-        System.out.println("\nYour balance: "+ Bal);
+    public void DisplayBalance(){
+        try{
+        ConnectDB();
+        PreparedStatement statement = connection.prepareStatement("SELECT Balance FROM USER Where UserID = ?");
+        statement.setString(1, currentUser.getID());
+        ResultSet result = statement.executeQuery();
+        int Balance = result.getInt("Balance");
+            System.out.println("\nYour Balance: " + Balance);
+        }
+        catch(SQLException e){
+        e.printStackTrace();
+        }
+        finally{
+            try{
+        CloseDB();
+        }
+        catch(SQLException ex){
+                ex.printStackTrace();
+                }
+        }
     }
-    
-    
-    public void ChangeData() throws SQLException{
-        String fName = currentUser.getFName();
-        String lName = currentUser.getLName();
+       
+    public void ChangeData(){
+        try{
+        ConnectDB();
+        
+        String FName = currentUser.getFName();
+        String LName = currentUser.getLName();
         String Email = currentUser.getEmail();
         String Password = currentUser.getPassword();
-        //DateOfBirth DoB = currentUser.getDoB();
         
-        System.out.printf("\nPress 1 to change your first name: %s", fName);
-        System.out.printf("\nPress 2 to change your last name: %s", lName);
+        System.out.printf("\nPress 1 to change your first name: %s", FName);
+        System.out.printf("\nPress 2 to change your last name: %s", LName);
         System.out.printf("\nPress 3 to change your Email: %s", Email);
         System.out.printf("\nPress 4 to change your Password %s", Password);
         
@@ -248,15 +291,29 @@ public class Bank implements Manager {
                 break;
             default:
                 System.out.println("Invalid Choice");
-            }        
+            }
+        } 
+        catch(SQLException e){
+        e.printStackTrace();
+            }    
+        finally{
+        try{
+            CloseDB();
+            }
+        catch(SQLException ex){
+            ex.printStackTrace();
+            }
+        }
     }
     
 public boolean menu() {
     boolean exit = false;
+    GUI Window = new GUI();
     
     System.out.println("Welcome");
     System.out.println("\nPress 1 to Register");
     System.out.println("Press 2 to Login");
+    System.out.println("Press 3 for the GUI");
     
     int choice1 = input.nextInt();
     
@@ -288,13 +345,8 @@ public boolean menu() {
                         DisplayBalance();
                         break;
                     case 3:
-                    {
-                        try {
-                            ChangeData();
-                        } catch (SQLException ex) {
-                            ex.printStackTrace();
-                        }
-                    }
+                        ChangeData();
+                        
                         break;
                     case 4:
                         exit =true;
@@ -307,13 +359,16 @@ public boolean menu() {
                  
             System.out.println("\nPress Enter to continue...");
             input.nextLine();
-            //input.nextLine();
+            input.nextLine();
             }
             break;
         default:
             System.out.println("Invalid choice.");
             break;
-    
+        
+        case 3:
+            Window.InitWindow();
+            
     }
     return exit;
 }
@@ -321,17 +376,12 @@ public boolean menu() {
 
     
     public static void main(String[] args) {
-    Bank wow = new Bank();
+    /*Bank wow = new Bank();
     while(!wow.exit){
-    wow.exit = wow.menu();
-    }
-    //wow.Login();
-    //boolean exit = false;
-    //while(!exit){
-    //exit = wow.menu();
-    }
+    wow.exit = wow.menu();*/
+    GUILogin Window = new GUILogin();
+    Window.InitWindow();
+            }
+   
+        }
     
-    }
-
-
-

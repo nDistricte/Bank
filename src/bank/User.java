@@ -19,7 +19,7 @@ public class User {
 
     public User(String fName,String lName, String Email, DateOfBirth DoB, String Password, int Balance, String ID){
     this.fName = fName;
-    this.fName = lName;
+    this.lName = lName;
     this.Email = Email;
     this.DoB = DoB;
     this.Password = Password;
@@ -73,14 +73,6 @@ public class User {
     }
     public String getID(){
     return ID;
-    }
-        
-    public void deposite(int amount){
-        Balance = Balance + amount;
-    }
-    
-    public void withdraw(int amount){
-    Balance = Balance - amount;
     }
     
 }
