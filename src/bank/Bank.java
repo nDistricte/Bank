@@ -9,9 +9,12 @@ import java.util.*;
 import java.sql.*;
 import java.time.LocalDate;
 import java.sql.Date;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.xml.transform.OutputKeys;
 /**
  *
  * @author anatol
@@ -20,7 +23,9 @@ public class Bank implements Manager {
        
     Scanner input = new Scanner(System.in);
     Connection connection = null;
-    
+    private User currentUser;
+    private boolean exit = false;
+       
     
     public void ConnectDB() throws SQLException{
         // Connect to the SQLite database
@@ -97,109 +102,286 @@ public class Bank implements Manager {
                 
     }
     
-    
-    //Maybe want to include threads?
-    public void transaction(String src, String dest, int amount){
+    public void transaction(String dest, int amount){
         try{
-            ConnectDB();  
-                      
-            PreparedStatement statement1 = connection.prepareStatement("SELECT UserID, Balance - ? AS Balance FROM User WHERE UserID = ?");
-            statement1.setInt(1, amount);
-            statement1.setString(2, src);
-            statement1.execute(); 
+            synchronized(this){
+            ConnectDB();
             
-            /*PreparedStatement statement2 = connection.prepareStatement("SELECT UserID, Balance + ? AS Balance FROM User Where UserID = ?");
-            statement2.setInt(1, amount);
-            statement2.setString(2, dest);
-            statement2.execute();*/
+            TransactionIDGenerator generatedID = new TransactionIDGenerator();
+            String transactionID = generatedID.generatedTransactionID();
+                      
+        // Deduct the amount from the source user's balance        
+        PreparedStatement statement1 = connection.prepareStatement("UPDATE User SET Balance = Balance - ?, Transactions = ? WHERE UserID = ?");
+        statement1.setInt(1, amount);
+        statement1.setString(2, transactionID);
+        statement1.setString(3, currentUser.getID());
+        statement1.executeUpdate();
+        
+        // Add the amount to the destination user's balance
+        PreparedStatement statement2 = connection.prepareStatement("UPDATE User SET Balance = Balance + ?, Transactions = ? WHERE UserID = ?");
+        statement2.setInt(1, amount);
+        statement2.setString(2, transactionID);
+        statement2.setString(3, dest);
+        statement2.executeUpdate();
+       
+        //We need to store every transaction from its source to its destination
+        PreparedStatement statement3 = connection.prepareStatement("INSERT INTO Transactions (TransactionID, UserID) VALUES (?, ?)");
+        statement3.setString(1, transactionID);
+        statement3.setString(2, currentUser.getID());
+        statement3.executeUpdate();
+        
+        PreparedStatement statement4 = connection.prepareStatement("INSERT INTO Transactions (TransactionID, UserID) VALUES (?, ?)");
+        statement4.setString(1, transactionID);
+        statement4.setString(2, dest);
+        statement4.executeUpdate();
+            }
         }
         catch(SQLException e){
             e.printStackTrace();
-        } finally{
-            try {
-                CloseDB();
-            } catch (SQLException e) {
-                e.printStackTrace();
+        }
+        finally{
+        try{
+            CloseDB();
+            }
+        catch(SQLException ex){
+            ex.printStackTrace();
             }
         }
-       
     }
     
-    public boolean Login(){
-        boolean invalid = false;
-        try{
-         while(!invalid){
+    public User Login(){
+    boolean invalid = false;
+    User user = null;
+    try {
+        while (user == null) {
             ConnectDB();
-            
+
             System.out.println("Your User ID: ");
-            String UserID = input.next();
+            String userID = input.next();
             System.out.println("\npassword: ");
             String password = input.next();
-         
-         
-           PreparedStatement statement = connection.prepareStatement("SELECT * FROM User WHERE UserID = ? AND Password = ?");
-           statement.setString(1, UserID);
-           statement.setString(2, password);
-           ResultSet result = statement.executeQuery();           
-           
-         if(result.next()){
-             invalid = true;
-             System.out.println("\nLogin was succesfull");
+
+            PreparedStatement statement = connection.prepareStatement("SELECT * FROM User WHERE UserID = ? AND Password = ?");
+            statement.setString(1, userID);
+            statement.setString(2, password);
+            ResultSet result = statement.executeQuery();
+
+            if (result.next()) {
+                invalid = true;
+                //Saving the data from the db into variables to re-use it
+                String firstName = result.getString("fName");
+                String lastName = result.getString("lName");
+                String email = result.getString("Email");
+
+                String dateString = result.getString("DateOfBirth");
+                SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+                java.util.Date utilDateOfBirth;
+                try {
+                    utilDateOfBirth = dateFormat.parse(dateString);
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                    // Handle the parse exception appropriately
+                    return null;
+                }
+
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTime(utilDateOfBirth);
+
+                DateOfBirth dob = new DateOfBirth(
+                    calendar.get(Calendar.DAY_OF_MONTH),
+                    calendar.get(Calendar.MONTH) + 1, // Months in Calendar class are 0-based
+                    calendar.get(Calendar.YEAR)
+                );
+
+                String userPassword = result.getString("Password");
+                String UserID = result.getString("UserID");
+                int balance = result.getInt("Balance");
+                
+                user = new User(firstName, lastName, email, dob, userPassword, balance, userID);
+                currentUser = user;
+                
+                System.out.println("\nLogin was successful");
+            } else {
+                System.out.println("\nInvalid user ID or password");
             }
-         else{
-             System.out.println("\n invalid \n");
-             }
-         }
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();        
+    }
+    finally{
+        try{
+            CloseDB();
+            }
+        catch(SQLException ex){
+            ex.printStackTrace();
+            }
+        }
+    return user;
+}
+    
+    public void DisplayBalance(){
+        try{
+        ConnectDB();
+        PreparedStatement statement = connection.prepareStatement("SELECT Balance FROM USER Where UserID = ?");
+        statement.setString(1, currentUser.getID());
+        ResultSet result = statement.executeQuery();
+        int Balance = result.getInt("Balance");
+            System.out.println("\nYour Balance: " + Balance);
         }
         catch(SQLException e){
-        e.printStackTrace();        
+        e.printStackTrace();
         }
-       
         finally{
-            try {
-                 CloseDB();
-             } catch (SQLException e) {
-                 e.printStackTrace();
-             }
+            try{
+        CloseDB();
         }
-        return invalid = false;                       
+        catch(SQLException ex){
+                ex.printStackTrace();
+                }
+        }
+    }
+       
+    public void ChangeData(){
+        try{
+        ConnectDB();
+        
+        String FName = currentUser.getFName();
+        String LName = currentUser.getLName();
+        String Email = currentUser.getEmail();
+        String Password = currentUser.getPassword();
+        
+        System.out.printf("\nPress 1 to change your first name: %s", FName);
+        System.out.printf("\nPress 2 to change your last name: %s", LName);
+        System.out.printf("\nPress 3 to change your Email: %s", Email);
+        System.out.printf("\nPress 4 to change your Password %s", Password);
+        
+        int choice = input.nextInt();
+        switch(choice){
+            case 1:
+                System.out.println("Please enter your first name: ");
+                String newFName = input.next();
+                PreparedStatement statement1 = connection.prepareStatement("UPDATE User SET fName = ? WHERE UserID = ?");
+                statement1.setString(1, newFName);
+                statement1.setString(2, currentUser.getID());
+                statement1.executeUpdate();
+                break;
+            case 2:
+                System.out.println("Please enter your last name: ");
+                String newLName = input.next();
+                PreparedStatement statement2 = connection.prepareStatement("UPDATE User SET lName = ? WHERE UserID = ?");
+                statement2.setString(1, newLName);
+                statement2.setString(2, currentUser.getID());
+                statement2.executeUpdate();
+                break;
+            case 3:
+                System.out.println("Please enter your Email: ");
+                String newEmail = input.next();
+                PreparedStatement statement3 = connection.prepareStatement("UPDATE User SET Email = ? WHERE UserID = ?");
+                statement3.setString(1, newEmail);
+                statement3.setString(2, currentUser.getID());
+                statement3.executeUpdate();
+                break;
+            case 4:
+                System.out.println("Please enter your new password: ");
+                String newPassword = input.next();
+                PreparedStatement statement4 = connection.prepareStatement("UPDATE User SET Password = ? WHERE UserID = ?");
+                statement4.setString(1, newPassword);
+                statement4.setString(2, currentUser.getID());
+                statement4.executeUpdate();
+                break;
+            default:
+                System.out.println("Invalid Choice");
+            }
+        } 
+        catch(SQLException e){
+        e.printStackTrace();
+            }    
+        finally{
+        try{
+            CloseDB();
+            }
+        catch(SQLException ex){
+            ex.printStackTrace();
+            }
+        }
     }
     
-    public int DisplayBalance(){
-        return 1;
-    }
-    
-    public boolean menu(){
+public boolean menu() {
     boolean exit = false;
+    GUI Window = new GUI();
     
-        System.out.println("Welcome");
-        System.out.println("\nPress 1 for adding a user");
-        System.out.println("Press 2 for displaying");
+    System.out.println("Welcome");
+    System.out.println("\nPress 1 to Register");
+    System.out.println("Press 2 to Login");
+    System.out.println("Press 3 for the GUI");
+    
+    int choice1 = input.nextInt();
+    
+    switch (choice1) {
+        case 1:
+            Register();
+            break;
+        case 2:
+            
+            currentUser =Login();
+            
+            while (!exit && currentUser != null) {
+                System.out.println("\nPress 1 to do a transaction");
+                System.out.println("Press 2 to display your balance");
+                System.out.println("Press 3 to Change your personal Data");
+                System.out.println("Press 4 to exit");
+                int choice2 = input.nextInt();
+                
+                switch (choice2) {
+                    
+                    case 1:                           
+                        System.out.print("Enter destination user ID: ");
+                        String dest = input.next();
+                        System.out.print("Enter amount: ");
+                        int amount = input.nextInt();                               
+                        transaction(dest, amount);
+                        break;                                           
+                    case 2:                       
+                        DisplayBalance();
+                        break;
+                    case 3:
+                        ChangeData();
+                        
+                        break;
+                    case 4:
+                        exit =true;
+                        break;
+                        
+                    default:
+                        System.out.println("Invalid choice.");
+                        break;
+                    }
+                 
+            System.out.println("\nPress Enter to continue...");
+            input.nextLine();
+            input.nextLine();
+            }
+            break;
+        default:
+            System.out.println("Invalid choice.");
+            break;
         
-        int choise = input.nextInt();
-        
-        switch(choise){
-        
-        case(1):
-            int Balance = input.nextInt();
-            String ID = input.next();
-        
-        case(2):
-        break;
-        }
-        return exit;
+        case 3:
+            Window.InitWindow();
+            
     }
+    return exit;
+}
+
+
     
     public static void main(String[] args) {
-    Bank wow = new Bank();
-    wow.transaction("A7087718", "A8114290", 25);
-    //wow.Login();
-    //boolean exit = false;
-    //while(!exit){
-    //exit = wow.menu();
-    }
+    /*Bank wow = new Bank();
+    while(!wow.exit){
+    wow.exit = wow.menu();*/
+    GUILogin Window = new GUILogin();
+    Window.InitWindow();
+            }
+   
+        }
     
-    }
-
-
-
